@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd   http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd   http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <context:component-scan base-package="com.damon4u.story.dao"/>
+
+    <!-- 读取业务JDBC配置文件 -->
+    <context:property-placeholder location="classpath:jdbc.properties" ignore-unresolvable="true"/>
+
+    <!-- 数据库连接池(只有读库) -->
+    <bean id="redisCacheDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 基本属性 url、user、password -->
+        <property name="url" value="${jdbc.slave.url}" />
+        <property name="username" value="${jdbc.slave.username}" />
+        <property name="password" value="${jdbc.slave.password}" />
+        <!-- 配置初始化大小、最小、最大 -->
+        <property name="initialSize" value="${jdbc.slave.initialPoolSize}" />
+        <property name="minIdle" value="${jdbc.slave.minPoolSize}" />
+        <property name="maxActive" value="${jdbc.slave.maxPoolSize}" />
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="${jdbc.slave.maxIdleTime}" />
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="${jdbc.slave.idleConnectionTestPeriod}" />
+        <property name="validationQuery" value="${jdbc.slave.preferredTestQuery}" />
+        <property name="testOnBorrow" value="${jdbc.slave.testConnectionOnCheckin}" />
+
+    </bean>
+
+    <bean id="redisCacheSqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="redisCacheDataSource"/>
+        <property name="configuration">
+            <bean class="org.apache.ibatis.session.Configuration">
+                <property name="jdbcTypeForNull" value="NULL"/>
+                <!-- 将数据库中的下划线与pojo中的驼峰进行映射，符合约定就不需要写resultMap了 -->
+                <property name="mapUnderscoreToCamelCase" value="true"/>
+            </bean>
+        </property>
+        <property name="typeAliasesPackage" value="com.damon4u.story.entity"/>
+    </bean>
+
+    <bean id="redisCacheSqlSession" class="org.mybatis.spring.SqlSessionTemplate" primary="true">
+        <constructor-arg index="0" ref="redisCacheSqlSessionFactory"/>
+    </bean>
+
+    <!-- 开启Dao接口自动实现 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.damon4u.story.dao"/>
+        <property name="sqlSessionFactoryBeanName" value="redisCacheSqlSessionFactory"/>
+    </bean>
+
+</beans>
