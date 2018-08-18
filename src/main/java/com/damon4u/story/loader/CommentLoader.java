@@ -10,6 +10,7 @@ import com.damon4u.story.entity.CommentResponse;
 import com.damon4u.story.entity.Song;
 import com.damon4u.story.entity.User;
 import com.damon4u.story.util.HttpUtil;
+import com.damon4u.story.util.UAUtil;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -83,7 +84,9 @@ public class CommentLoader {
     private void loadCommentInfo(long songId) {
         String url = "http://music.163.com/weapi/v1/resource/comments/R_SO_4_" + songId + "/?csrf_token=d2c9e86c94efabcc4b5a1a6d757d417e";
         List<Header> headers = Lists.newArrayList();
-        headers.add(new BasicHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"));
+        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+        headers.add(new BasicHeader("Referer", "http://music.163.com/"));
+        headers.add(new BasicHeader("Connection", "keep-alive/"));
         List<NameValuePair> params = Lists.newArrayList();
         params.add(new BasicNameValuePair("params", "flQdEgSsTmFkRagRN2ceHMwk6lYVIMro5auxLK/JywlqdjeNvEtiWDhReFI+QymePGPLvPnIuVi3dfsDuqEJW204VdwvX+gr3uiRBeSFuOm1VUSJ1HqOc+nJCh0j6WGUbWuJC5GaHTEE4gcpWXX36P4Eu4djoQBzoqdsMbCwoolb2/WrYw/N2hehuwBHO4Oz"));
         params.add(new BasicNameValuePair("encSecKey", "0263b1cd3b0a9b621a819b73e588e1cc5709349b21164dc45ab760e79858bb712986ea064dbfc41669e527b767f02da7511ac862cbc54ea7d164fc65e0359962273616e68e694453fb6820fa36dd9915b2b0f60dadb0a6022b2187b9ee011b35d82a1c0ed8ba0dceb877299eca944e80b1e74139f0191adf71ca536af7d7ec25"));
@@ -144,7 +147,9 @@ public class CommentLoader {
     public Song getSongInfo(long songId) {
         String url = "http://music.163.com/song?id=" + songId;
         List<Header> headerList = Lists.newArrayList();
-        headerList.add(new BasicHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"));
+        headerList.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+        headerList.add(new BasicHeader("Referer", "http://music.163.com/"));
+        headerList.add(new BasicHeader("Connection", "keep-alive/"));
         String response = HttpUtil.get(url, headerList, "utf-8");
         if (StringUtils.isBlank(response)) {
             return null;
