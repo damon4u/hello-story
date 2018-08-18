@@ -29,12 +29,12 @@ public class CommentResponseLoaderTest {
 
     @Test
     public void loadSongs() throws Exception {
-        commentLoader.loadSongs(32317208,32317208);
+        commentLoader.loadSongs(200000,210000);
     }
 
     @Test
     public void testSongInfo() {
-        commentLoader.getSongInfo(32317208);
+        commentLoader.getSongInfo(200000);
     }
     
     @Test

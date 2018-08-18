@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,13 +65,14 @@ public class CommentLoader {
      * @param start 歌曲id起始
      * @param end 歌曲id结束
      */
-    public void loadSongs(int start, int end) {
+    public void loadSongs(int start, int end) throws InterruptedException {
         for(int songId = start; songId <= end; songId++) {
             Song songInfo = getSongInfo(songId);
             if (songInfo != null) {
                 songDao.save(songInfo);
                 loadCommentInfo(songId);
             }
+            TimeUnit.SECONDS.sleep(2);
         }
     }
 
@@ -89,10 +91,6 @@ public class CommentLoader {
         if (StringUtils.isNotBlank(response)) {
             JSONObject res = JSONObject.parseObject(response);
             long commentCount = res.getLongValue("total"); // 歌曲总评论数
-            if (commentCount < 1000) {
-                // 总评论数少于1000的歌曲就扔掉了
-                return;
-            }
 //            String songIdStr = String.valueOf(songId);
 //            jedisTemplate.zadd(KEY_COMMENT_RANK, commentCount, songIdStr);
             CommentResponse[] hotCommentResponses = res.getObject("hotComments", CommentResponse[].class);
@@ -117,18 +115,21 @@ public class CommentLoader {
                         }
                         beRepliedContent = commentReplied.getContent();
                     }
-                    
-                    Comment comment = new Comment();
-                    comment.setCommentId(commentResponse.getCommentId());
-                    comment.setSongId(songId);
-                    comment.setLikedCount(commentResponse.getLikedCount());
-                    comment.setContent(commentResponse.getContent());
-                    comment.setUserId(userId);
-                    comment.setBeRepliedUserId(beRepliedUserId);
-                    comment.setBeRepliedContent(beRepliedContent);
-                    comment.setCommentTime(new Date(commentResponse.getTime()));
-                    comment.setCreateTime(new Date());
-                    commentDao.save(comment);
+                    if (commentCount > 1000) {
+                        // 总评论数少于1000的歌曲就扔掉了
+                        Comment comment = new Comment();
+                        comment.setCommentId(commentResponse.getCommentId());
+                        comment.setSongId(songId);
+                        comment.setLikedCount(commentResponse.getLikedCount());
+                        comment.setContent(commentResponse.getContent());
+                        comment.setUserId(userId);
+                        comment.setBeRepliedUserId(beRepliedUserId);
+                        comment.setBeRepliedContent(beRepliedContent);
+                        comment.setCommentTime(new Date(commentResponse.getTime()));
+                        comment.setCreateTime(new Date());
+                        commentDao.save(comment);
+                    }
+
                 }
             }
         }
