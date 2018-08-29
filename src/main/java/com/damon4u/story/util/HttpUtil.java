@@ -5,6 +5,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Consts;
 import org.apache.http.Header;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
@@ -77,6 +78,46 @@ public class HttpUtil {
                 }
             }
             CloseableHttpResponse response = client.execute(method);
+            try {
+                if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                    return EntityUtils.toString(response.getEntity(), charset);
+                }
+            } finally {
+                response.close();
+            }
+            log.warn("http get:" + response.getStatusLine() + " url:" + url);
+        } catch (IOException e) {
+            log.warn("HTTP GET请求发生异常:" + e.getMessage(), e);
+        } finally {
+            method.releaseConnection();
+        }
+        return null;
+    }
+
+    public static String getWithProxy(String url, HttpHost proxy, List<Header> header, String charset) {
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setCharset(Consts.UTF_8).build();
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+        connManager.setDefaultConnectionConfig(connectionConfig);
+        connManager.setMaxTotal(MAX_TOTAL_CONNECTIONS);
+        connManager.setDefaultMaxPerRoute(MAX_PER_ROUTE);
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(CONNECTION_TIMEOUT)
+                .setSocketTimeout(SOCKET_TIMEOUT)
+                .setConnectionRequestTimeout(CONNECTION_MANAGER_TIMEOUT)
+                .setProxy(proxy)
+                .build();
+        CloseableHttpClient httpClient = HttpClients.custom().
+                setConnectionManager(connManager).
+                setDefaultRequestConfig(requestConfig).build();
+        HttpGet method = new HttpGet(url);
+        try {
+            if(CollectionUtils.isNotEmpty(header)){
+                for (Header h : header) {
+                    method.addHeader(h);
+                }
+            }
+            CloseableHttpResponse response = httpClient.execute(method);
             try {
                 if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                     return EntityUtils.toString(response.getEntity(), charset);
