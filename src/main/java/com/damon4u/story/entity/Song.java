@@ -1,6 +1,5 @@
 package com.damon4u.story.entity;
 
-import lombok.Builder;
 import lombok.Data;
 
 import java.util.Date;
@@ -19,6 +18,8 @@ public class Song {
     private String name;
     
     private String description;
+
+    private Long commentCount;
     
     private String image;
     

@@ -70,8 +70,7 @@ public class CommentLoader {
         for(int songId = start; songId <= end; songId++) {
             Song songInfo = getSongInfo(songId);
             if (songInfo != null) {
-                songDao.save(songInfo);
-                loadCommentInfo(songId);
+                loadCommentInfo(songInfo);
             }
             TimeUnit.SECONDS.sleep(2);
         }
@@ -79,9 +78,10 @@ public class CommentLoader {
 
     /**
      * 获取歌曲评论
-     * @param songId 歌曲id
+     * @param song  歌曲信息
      */
-    private void loadCommentInfo(long songId) {
+    private void loadCommentInfo(Song song) {
+        Long songId = song.getSongId();
         String url = "http://music.163.com/weapi/v1/resource/comments/R_SO_4_" + songId + "/?csrf_token=d2c9e86c94efabcc4b5a1a6d757d417e";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
@@ -91,9 +91,10 @@ public class CommentLoader {
         params.add(new BasicNameValuePair("params", "flQdEgSsTmFkRagRN2ceHMwk6lYVIMro5auxLK/JywlqdjeNvEtiWDhReFI+QymePGPLvPnIuVi3dfsDuqEJW204VdwvX+gr3uiRBeSFuOm1VUSJ1HqOc+nJCh0j6WGUbWuJC5GaHTEE4gcpWXX36P4Eu4djoQBzoqdsMbCwoolb2/WrYw/N2hehuwBHO4Oz"));
         params.add(new BasicNameValuePair("encSecKey", "0263b1cd3b0a9b621a819b73e588e1cc5709349b21164dc45ab760e79858bb712986ea064dbfc41669e527b767f02da7511ac862cbc54ea7d164fc65e0359962273616e68e694453fb6820fa36dd9915b2b0f60dadb0a6022b2187b9ee011b35d82a1c0ed8ba0dceb877299eca944e80b1e74139f0191adf71ca536af7d7ec25"));
         String response = HttpUtil.post(url,headers, null, params, "utf-8");
+        long commentCount = 0;
         if (StringUtils.isNotBlank(response)) {
             JSONObject res = JSONObject.parseObject(response);
-            long commentCount = res.getLongValue("total"); // 歌曲总评论数
+            commentCount = res.getLongValue("total"); // 歌曲总评论数
 //            String songIdStr = String.valueOf(songId);
 //            jedisTemplate.zadd(KEY_COMMENT_RANK, commentCount, songIdStr);
             CommentResponse[] hotCommentResponses = res.getObject("hotComments", CommentResponse[].class);
@@ -136,6 +137,8 @@ public class CommentLoader {
                 }
             }
         }
+        song.setCommentCount(commentCount);
+        songDao.save(song);
     }
 
     /**
