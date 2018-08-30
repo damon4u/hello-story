@@ -55,5 +55,5 @@ public class Proxy implements Serializable {
     public HttpHost toHttpHost() {
         return new HttpHost(ip,port,type);
     }
-    
+
 }

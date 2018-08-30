@@ -39,7 +39,9 @@ public class ProxyLoader {
         
         List<Proxy> proxyList = parse(response);
         for (Proxy proxy : proxyList) {
-            validate(proxy.toHttpHost());
+            if (validate(proxy.toHttpHost())) {
+                LOGGER.info("================> {}", proxy.getProxyStr());
+            }
         }
         
     }
@@ -62,29 +64,22 @@ public class ProxyLoader {
     }
 
     public static boolean validate(HttpHost proxy) {
-        String validateUrl = "http://www.baidu.com/";
+        String validateUrl = proxy.getSchemeName() + "://www.baidu.com/";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        headers.add(new BasicHeader("Proxy-Authorization", getAuth()));
-        String response = HttpUtil.getWithProxy(validateUrl, proxy, headers, null);
-        LOGGER.info("response={}", response);
-        return true;
+        String response = HttpUtil.getWithProxy(validateUrl, proxy, headers);
+//        LOGGER.info("response={}", response);
+        return response != null;
     }
     
-    public static String getAuth() {
-        return "Basic " + base64("damon4u123@163.com" + ":" + "RFvNzHvvUV67au");
-    }
-
-    public static String base64(String data) {
-        return Base64.encodeBase64String(data.getBytes(Charset.forName("UTF-8")));
-    }
-
-    public static void main(String[] args) {
-//        loadFromXici();
-        boolean response = validate(new HttpHost("58.209.89.183", 23564, "http"));
-        LOGGER.info("response={}", response);
-        System.out.println(getAuth());
-//        String s = HttpUtil.get("http://www.baidu.com/");
+    public static void main(String[] args) throws Exception {
+        loadFromXici();
+//        boolean response = validate(new HttpHost("58.209.89.183", 23564, "http"));
+//        LOGGER.info("response={}", response);
+//        List<Header> headers = Lists.newArrayList();
+//        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+//        String s = HttpUtil.getWithProxy("http://www.baidu.com/", new HttpHost("58.209.89.183", 23564, "http"), headers);
+//        String s = HttpUtil.getWithProxy("http://www.baidu.com/", null, headers);
 //        LOGGER.info("s={}", s);
     }
 }

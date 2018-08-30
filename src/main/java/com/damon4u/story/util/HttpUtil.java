@@ -1,5 +1,8 @@
 package com.damon4u.story.util;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
@@ -34,8 +39,8 @@ public class HttpUtil {
 
     private static final int MAX_TOTAL_CONNECTIONS = 500;
     private static final int MAX_PER_ROUTE = 100;
-    private static final int CONNECTION_TIMEOUT = 5000;
-    private static final int SOCKET_TIMEOUT = 10000;
+    private static final int CONNECTION_TIMEOUT = 2000;
+    private static final int SOCKET_TIMEOUT = 2000;
     private static final int CONNECTION_MANAGER_TIMEOUT = 2000;
 
     private static CloseableHttpClient client;
@@ -111,6 +116,7 @@ public class HttpUtil {
                 setConnectionManager(connManager).
                 setDefaultRequestConfig(requestConfig).build();
         HttpGet method = new HttpGet(url);
+        method.setConfig(requestConfig);
         try {
             if(CollectionUtils.isNotEmpty(header)){
                 for (Header h : header) {
@@ -125,9 +131,9 @@ public class HttpUtil {
             } finally {
                 response.close();
             }
-            log.warn("http get:" + response.getStatusLine() + " url:" + url);
+//            log.warn("http get:" + response.getStatusLine() + " url:" + url);
         } catch (IOException e) {
-            log.warn("HTTP GET请求发生异常:" + e.getMessage(), e);
+//            log.warn("HTTP GET请求发生异常:" + e.getMessage(), e);
         } finally {
             method.releaseConnection();
         }
@@ -226,6 +232,34 @@ public class HttpUtil {
             public String call() throws Exception {
                 return post(url,params);
             }});
+    }
+
+
+    public static String getWithProxy(String url, HttpHost proxy, List<Header> header) {
+        try {
+            OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                    .connectTimeout(2, TimeUnit.SECONDS)
+                    .readTimeout(2, TimeUnit.SECONDS);
+            if (proxy != null) {
+                builder.proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxy.getHostName(), proxy.getPort())));
+            }
+            OkHttpClient okHttpClient = builder.build();
+            Request.Builder requestBuilder = new Request.Builder();
+            requestBuilder.url(url);
+            if (CollectionUtils.isNotEmpty(header)) {
+                for (Header h : header) {
+                    requestBuilder.addHeader(h.getName(), h.getValue());
+                }
+            }
+            Request request = requestBuilder.build();
+            Response response = okHttpClient.newCall(request).execute();
+            if (response != null && response.code() == 200 && response.body() != null) {
+                return response.body().string();
+            }
+        } catch (Exception e) {
+            log.warn(e.getMessage());
+        }
+        return null;
     }
 
 }
