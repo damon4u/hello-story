@@ -2,11 +2,13 @@ package com.damon4u.story.loader;
 
 import com.alibaba.fastjson.JSONObject;
 import com.damon4u.story.dao.CommentDao;
+import com.damon4u.story.dao.ProxyDao;
 import com.damon4u.story.dao.SongDao;
 import com.damon4u.story.dao.UserDao;
 import com.damon4u.story.entity.Comment;
 import com.damon4u.story.entity.CommentReplied;
 import com.damon4u.story.entity.CommentResponse;
+import com.damon4u.story.entity.Proxy;
 import com.damon4u.story.entity.Song;
 import com.damon4u.story.entity.User;
 import com.damon4u.story.util.HttpUtil;
@@ -15,6 +17,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
+import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
@@ -25,6 +28,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,6 +61,9 @@ public class CommentLoader {
     @Resource
     private CommentDao commentDao;
     
+    @Resource
+    private ProxyDao proxyDao;
+    
 //    @Resource
 //    private JedisTemplate jedisTemplate;
 
@@ -68,9 +75,14 @@ public class CommentLoader {
      */
     public void loadSongs(int start, int end) throws InterruptedException {
         for(int songId = start; songId <= end; songId++) {
-            Song songInfo = getSongInfo(songId);
+            Proxy proxy = getRandomProxy();
+            Song songInfo = getSongInfo(songId, proxy.toHttpHost());
+            if (songInfo == null) { // 重试一次
+                proxy = getRandomProxy();
+                songInfo = getSongInfo(songId, proxy.toHttpHost());
+            }
             if (songInfo != null) {
-                loadCommentInfo(songInfo);
+                loadCommentInfo(songInfo, proxy.toHttpHost());
             }
             TimeUnit.SECONDS.sleep(2);
         }
@@ -79,8 +91,9 @@ public class CommentLoader {
     /**
      * 获取歌曲评论
      * @param song  歌曲信息
+     * @param proxy
      */
-    private void loadCommentInfo(Song song) {
+    private void loadCommentInfo(Song song, HttpHost proxy) {
         Long songId = song.getSongId();
         String url = "http://music.163.com/weapi/v1/resource/comments/R_SO_4_" + songId + "/?csrf_token=d2c9e86c94efabcc4b5a1a6d757d417e";
         List<Header> headers = Lists.newArrayList();
@@ -90,7 +103,7 @@ public class CommentLoader {
         List<NameValuePair> params = Lists.newArrayList();
         params.add(new BasicNameValuePair("params", "flQdEgSsTmFkRagRN2ceHMwk6lYVIMro5auxLK/JywlqdjeNvEtiWDhReFI+QymePGPLvPnIuVi3dfsDuqEJW204VdwvX+gr3uiRBeSFuOm1VUSJ1HqOc+nJCh0j6WGUbWuJC5GaHTEE4gcpWXX36P4Eu4djoQBzoqdsMbCwoolb2/WrYw/N2hehuwBHO4Oz"));
         params.add(new BasicNameValuePair("encSecKey", "0263b1cd3b0a9b621a819b73e588e1cc5709349b21164dc45ab760e79858bb712986ea064dbfc41669e527b767f02da7511ac862cbc54ea7d164fc65e0359962273616e68e694453fb6820fa36dd9915b2b0f60dadb0a6022b2187b9ee011b35d82a1c0ed8ba0dceb877299eca944e80b1e74139f0191adf71ca536af7d7ec25"));
-        String response = HttpUtil.post(url,headers, null, params, "utf-8");
+        String response = HttpUtil.postWithProxy(url, proxy, headers, params);
         long commentCount = 0;
         if (StringUtils.isNotBlank(response)) {
             JSONObject res = JSONObject.parseObject(response);
@@ -147,13 +160,13 @@ public class CommentLoader {
      * @param songId 歌曲id
      * @return 如果找到，返回：歌曲名称 - 歌手名称；否则返回null
      */
-    public Song getSongInfo(long songId) {
+    public Song getSongInfo(long songId, HttpHost proxy) {
         String url = "http://music.163.com/song?id=" + songId;
         List<Header> headerList = Lists.newArrayList();
         headerList.add(new BasicHeader("User-Agent", UAUtil.getUA()));
         headerList.add(new BasicHeader("Referer", "http://music.163.com/"));
         headerList.add(new BasicHeader("Connection", "keep-alive/"));
-        String response = HttpUtil.get(url, headerList, "utf-8");
+        String response = HttpUtil.getWithProxy(url, proxy, headerList);
         if (StringUtils.isBlank(response)) {
             return null;
         }
@@ -184,6 +197,15 @@ public class CommentLoader {
             return song;
         }
         return null;
+    }
+
+    /**
+     * 查询一个随机代理
+     * @return
+     */
+    private Proxy getRandomProxy() {
+        int count = proxyDao.count();
+        return proxyDao.getByIndex(ThreadLocalRandom.current().nextInt(count));
     }
 
 }

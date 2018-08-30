@@ -1,10 +1,13 @@
 package com.damon4u.story.loader;
 
+import com.damon4u.story.dao.ProxyDao;
+import com.damon4u.story.entity.GitProxy;
 import com.damon4u.story.entity.Proxy;
 import com.damon4u.story.util.HttpUtil;
+import com.damon4u.story.util.JSONUtil;
 import com.damon4u.story.util.UAUtil;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.message.BasicHeader;
@@ -14,11 +17,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.charset.Charset;
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,10 +29,14 @@ import java.util.List;
  * @author damon4u
  * @version 2018-08-28 10:57
  */
+@Component
 public class ProxyLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyLoader.class);
     
-    public static void loadFromXici() {
+    @Resource
+    private ProxyDao proxyDao;
+    
+    public void loadFromXici() {
         String url = "http://www.xicidaili.com/nn/1.html";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
@@ -45,8 +50,29 @@ public class ProxyLoader {
         }
         
     }
+    
+    public void loadFromGit() {
+        String url = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt";
+        List<Header> headers = Lists.newArrayList();
+        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+        String response = HttpUtil.get(url, headers);
+        if (response == null) {
+            return;
+        }
+        List<GitProxy> gitProxyList = JSONUtil.fromJsonList(response, GitProxy.class);
+        if (CollectionUtils.isNotEmpty(gitProxyList)) {
+            for (GitProxy gitProxy : gitProxyList) {
+                LOGGER.info("gitProxy={}", gitProxy.getProxyStr());
+                // 先只要http类型的
+                if (gitProxy.getProto().startsWith("http") && validate(gitProxy.toHttpHost())) {
+                    LOGGER.info("================> {}", gitProxy.getProxyStr());
+                    proxyDao.save(new Proxy(gitProxy.getIp(), gitProxy.getPort(), gitProxy.getProto()));
+                }
+            }
+        }
+    }
 
-    public static List<Proxy> parse(String html) {
+    public List<Proxy> parse(String html) {
         Document document = Jsoup.parse(html);
         Elements elements = document.select("table[id=ip_list] tr[class]");
         List<Proxy> proxyList = new ArrayList<>(elements.size());
@@ -63,8 +89,12 @@ public class ProxyLoader {
         return proxyList;
     }
 
-    public static boolean validate(HttpHost proxy) {
-        String validateUrl = proxy.getSchemeName() + "://www.baidu.com/";
+    public boolean validate(HttpHost proxy) {
+        String schemeName = proxy.getSchemeName();
+        String validateUrl = "http://www.baidu.com/";
+        if (schemeName.equalsIgnoreCase("https")) {
+            validateUrl = "https://www.baidu.com/";
+        }
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
         String response = HttpUtil.getWithProxy(validateUrl, proxy, headers);
@@ -72,14 +102,4 @@ public class ProxyLoader {
         return response != null;
     }
     
-    public static void main(String[] args) throws Exception {
-        loadFromXici();
-//        boolean response = validate(new HttpHost("58.209.89.183", 23564, "http"));
-//        LOGGER.info("response={}", response);
-//        List<Header> headers = Lists.newArrayList();
-//        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-//        String s = HttpUtil.getWithProxy("http://www.baidu.com/", new HttpHost("58.209.89.183", 23564, "http"), headers);
-//        String s = HttpUtil.getWithProxy("http://www.baidu.com/", null, headers);
-//        LOGGER.info("s={}", s);
-    }
 }

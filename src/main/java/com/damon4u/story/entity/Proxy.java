@@ -13,16 +13,14 @@ import java.io.Serializable;
  */
 @Data
 public class Proxy implements Serializable {
+    
+    private int id;
 
     private String ip;
     
     private int port;
     
-    private String type;      //http、https
-    
-    private boolean availableFlag;
-    
-    private boolean anonymousFlag;
+    private String proto;      //http、https
     
     private long lastSuccessfulTime;//最近一次请求成功时间
     
@@ -36,24 +34,18 @@ public class Proxy implements Serializable {
 
     public Proxy() {}
 
-    public Proxy(String ip, int port) {
+    public Proxy(String ip, int port, String proto) {
         this.ip = ip;
         this.port = port;
-        this.type = "http";
-    }
-
-    public Proxy(String ip, int port, String type) {
-        this.ip = ip;
-        this.port = port;
-        this.type = type.toLowerCase();
+        this.proto = proto.toLowerCase();
     }
 
     public String getProxyStr() {
-        return type + "://" + ip + ":" + port;
+        return proto + "://" + ip + ":" + port;
     }
 
     public HttpHost toHttpHost() {
-        return new HttpHost(ip,port,type);
+        return new HttpHost(ip, port, proto);
     }
 
 }

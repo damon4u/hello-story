@@ -29,14 +29,9 @@ public class CommentResponseLoaderTest {
 
     @Test
     public void loadSongs() throws Exception {
-        commentLoader.loadSongs(209996,220000);
+        commentLoader.loadSongs(209996,209996);
     }
 
-    @Test
-    public void testSongInfo() {
-        commentLoader.getSongInfo(200000);
-    }
-    
     @Test
     public void testUser() {
         User user = new User();

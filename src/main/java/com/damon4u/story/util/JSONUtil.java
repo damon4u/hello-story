@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.List;
 
 public class JSONUtil {
 
@@ -42,6 +43,15 @@ public class JSONUtil {
     public static <T> T fromJson(String jsonAsString, TypeReference<T> typeRef) {
         try {
             return mapper.readValue(jsonAsString, typeRef);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+        return null;
+    }
+
+    public static <T> List<T> fromJsonList(String jsonAsString, Class<T> generic) {
+        try {
+            return mapper.readValue(jsonAsString, mapper.getTypeFactory().constructCollectionType(List.class, generic));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }

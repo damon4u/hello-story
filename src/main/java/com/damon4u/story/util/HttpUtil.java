@@ -1,7 +1,9 @@
 package com.damon4u.story.util;
 
+import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -238,10 +240,15 @@ public class HttpUtil {
     public static String getWithProxy(String url, HttpHost proxy, List<Header> header) {
         try {
             OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                    .connectTimeout(2, TimeUnit.SECONDS)
-                    .readTimeout(2, TimeUnit.SECONDS);
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .readTimeout(3, TimeUnit.SECONDS);
             if (proxy != null) {
-                builder.proxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxy.getHostName(), proxy.getPort())));
+                String schemeName = proxy.getSchemeName();
+                Proxy.Type type = Proxy.Type.HTTP;
+                if (schemeName.startsWith("socks")) {
+                    type = Proxy.Type.SOCKS;
+                }
+                builder.proxy(new Proxy(type, new InetSocketAddress(proxy.getHostName(), proxy.getPort())));
             }
             OkHttpClient okHttpClient = builder.build();
             Request.Builder requestBuilder = new Request.Builder();
@@ -255,6 +262,53 @@ public class HttpUtil {
             Response response = okHttpClient.newCall(request).execute();
             if (response != null && response.code() == 200 && response.body() != null) {
                 return response.body().string();
+            }
+            if (response != null) {
+                response.close();
+            }
+        } catch (Exception e) {
+            log.warn(e.getMessage());
+        }
+        return null;
+    }
+
+    public static String postWithProxy(String url, HttpHost proxy, List<Header> header, List<NameValuePair> params) {
+        try {
+            OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .readTimeout(3, TimeUnit.SECONDS);
+            if (proxy != null) {
+                String schemeName = proxy.getSchemeName();
+                Proxy.Type type = Proxy.Type.HTTP;
+                if (schemeName.startsWith("socks")) {
+                    type = Proxy.Type.SOCKS;
+                }
+                builder.proxy(new Proxy(type, new InetSocketAddress(proxy.getHostName(), proxy.getPort())));
+            }
+            OkHttpClient okHttpClient = builder.build();
+
+            FormBody.Builder formBodyBuilder = new FormBody.Builder();
+            if (CollectionUtils.isNotEmpty(params)) {
+                for (NameValuePair nameValuePair : params) {
+                    formBodyBuilder.add(nameValuePair.getName(), nameValuePair.getValue());
+                }
+            }
+            FormBody formBody = formBodyBuilder.build();
+
+            Request.Builder requestBuilder = new Request.Builder();
+            requestBuilder.url(url).post(formBody);
+            if (CollectionUtils.isNotEmpty(header)) {
+                for (Header h : header) {
+                    requestBuilder.addHeader(h.getName(), h.getValue());
+                }
+            }
+            Request request = requestBuilder.build();
+            Response response = okHttpClient.newCall(request).execute();
+            if (response != null && response.code() == 200 && response.body() != null) {
+                return response.body().string();
+            }
+            if (response != null) {
+                response.close();
             }
         } catch (Exception e) {
             log.warn(e.getMessage());
