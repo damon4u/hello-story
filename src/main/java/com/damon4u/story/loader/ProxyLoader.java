@@ -101,5 +101,16 @@ public class ProxyLoader {
 //        LOGGER.info("response={}", response);
         return response != null;
     }
+
+    public void validateFromDb() {
+        List<Proxy> allProxy = proxyDao.getAllProxy();
+        for (Proxy proxy : allProxy) {
+            LOGGER.info("proxy={}", proxy.getProxyStr());
+            if (!validate(proxy.toHttpHost())) {
+//                proxyDao.delete(proxy.getId());
+                LOGGER.error("disable proxy={}", proxy.getProxyStr());
+            }
+        }
+    }
     
 }

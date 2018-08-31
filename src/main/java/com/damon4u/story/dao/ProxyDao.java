@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface ProxyDao {
 
@@ -16,6 +18,9 @@ public interface ProxyDao {
 
     @Select("SELECT * FROM proxy LIMIT #{index},1")
     Proxy getByIndex(@Param("index") int index);
+
+    @Select("SELECT * FROM proxy")
+    List<Proxy> getAllProxy();
 
     @Select("SELECT count(id) FROM proxy")
     int count();

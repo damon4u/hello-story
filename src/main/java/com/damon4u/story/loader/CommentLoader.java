@@ -78,8 +78,13 @@ public class CommentLoader {
             Proxy proxy = getRandomProxy();
             Song songInfo = getSongInfo(songId, proxy.toHttpHost());
             if (songInfo == null) { // 重试一次
+                proxyDao.delete(proxy.getId());
                 proxy = getRandomProxy();
                 songInfo = getSongInfo(songId, proxy.toHttpHost());
+            }
+            if (songInfo == null) {
+                proxyDao.delete(proxy.getId());
+                logger.error("songInfo is null. songId={}", songId);
             }
             if (songInfo != null) {
                 loadCommentInfo(songInfo, proxy.toHttpHost());
