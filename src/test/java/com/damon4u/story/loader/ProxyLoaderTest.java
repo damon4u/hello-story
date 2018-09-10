@@ -30,7 +30,7 @@ public class ProxyLoaderTest {
     
     @Test
     public void testValidate() {
-        assertTrue(proxyLoader.validate(new HttpHost("66.70.222.225", 80, "http")));
+        assertTrue(proxyLoader.validateProxy(new HttpHost("66.70.222.225", 80, "http")));
     }
 
     @Test

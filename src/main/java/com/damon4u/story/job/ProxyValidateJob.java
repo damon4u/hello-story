@@ -8,20 +8,22 @@ import javax.annotation.Resource;
 
 /**
  * Description:
+ * 
+ * 定时验证数据库代理池中的代理记录，删除不可用的
  *
  * @author damon4u
  * @version 2018-09-10 11:57
  */
-public class ProxyLoadJob {
+public class ProxyValidateJob {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyLoadJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProxyValidateJob.class);
     
     @Resource
     private ProxyLoader proxyLoader;
     
     public void execute() {
-        LOGGER.info("ProxyLoadJob start.");
-        proxyLoader.loadProxy();
-        LOGGER.info("ProxyLoadJob end.");
+        LOGGER.info("ProxyValidateJob start.");
+        proxyLoader.validateFromDb();
+        LOGGER.info("ProxyValidateJob end.");
     }
 }

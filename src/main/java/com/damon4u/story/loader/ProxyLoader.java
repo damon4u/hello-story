@@ -22,6 +22,9 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Description:
@@ -36,22 +39,12 @@ public class ProxyLoader {
     @Resource
     private ProxyDao proxyDao;
     
-    public void loadFromXici() {
-        String url = "http://www.xicidaili.com/nn/1.html";
-        List<Header> headers = Lists.newArrayList();
-        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        String response = HttpUtil.get(url, headers);
-        
-        List<Proxy> proxyList = parse(response);
-        for (Proxy proxy : proxyList) {
-            if (validate(proxy.toHttpHost())) {
-                LOGGER.info("================> {}", proxy.getProxyStr());
-            }
-        }
-        
+    public void loadProxy() {
+        loadFromGit();
     }
     
     public void loadFromGit() {
+        LOGGER.info("loadFromGit start...");
         String url = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
@@ -60,19 +53,37 @@ public class ProxyLoader {
             return;
         }
         List<GitProxy> gitProxyList = JSONUtil.fromJsonList(response, GitProxy.class);
+        List<HttpHost> proxyList = Lists.newArrayList();
         if (CollectionUtils.isNotEmpty(gitProxyList)) {
             for (GitProxy gitProxy : gitProxyList) {
                 LOGGER.info("gitProxy={}", gitProxy.getProxyStr());
-                // 先只要http类型的
-                if (gitProxy.getProto().startsWith("http") && validate(gitProxy.toHttpHost())) {
-                    LOGGER.info("================> {}", gitProxy.getProxyStr());
-                    proxyDao.save(new Proxy(gitProxy.getIp(), gitProxy.getPort(), gitProxy.getProto()));
-                }
+                proxyList.add(gitProxy.toHttpHost());
             }
         }
+        filterProxy(proxyList);
+        LOGGER.info("loadFromGit done.");
     }
 
-    public List<Proxy> parse(String html) {
+    public void loadFromXici() {
+        LOGGER.info("loadFromXici start...");
+        String url = "http://www.xicidaili.com/nn/1.html";
+        List<Header> headers = Lists.newArrayList();
+        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+        String response = HttpUtil.get(url, headers);
+
+        List<Proxy> xiciProxyList = parse(response);
+        List<HttpHost> proxyList = Lists.newArrayList();
+        if (CollectionUtils.isNotEmpty(xiciProxyList)) {
+            for (Proxy xiciProxy : xiciProxyList) {
+                LOGGER.info("xiciProxy={}", xiciProxy.getProxyStr());
+                proxyList.add(xiciProxy.toHttpHost());
+            }
+        }
+        filterProxy(proxyList);
+        LOGGER.info("loadFromXici done.");
+    }
+    
+    private List<Proxy> parse(String html) {
         Document document = Jsoup.parse(html);
         Elements elements = document.select("table[id=ip_list] tr[class]");
         List<Proxy> proxyList = new ArrayList<>(elements.size());
@@ -88,8 +99,51 @@ public class ProxyLoader {
         }
         return proxyList;
     }
+    
+    public void filterProxy(List<HttpHost> proxyList) {
+        if (CollectionUtils.isNotEmpty(proxyList)) {
+            final CountDownLatch latch = new CountDownLatch(proxyList.size());
+            ExecutorService executorService = Executors.newFixedThreadPool(5);
+            for (HttpHost originProxy : proxyList) {
+                executorService.execute(new FilterJob(originProxy, latch));
+            }
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getMessage());
+            }
+            executorService.shutdownNow();
+        }
+    }
 
-    public boolean validate(HttpHost proxy) {
+    class FilterJob implements Runnable {
+        
+        private HttpHost proxy;
+        
+        private CountDownLatch latch;
+
+        public FilterJob(HttpHost proxy, CountDownLatch latch) {
+            this.proxy = proxy;
+            this.latch = latch;
+        }
+
+        @Override
+        public void run() {
+            try {
+                // 先只要http类型的
+                if (proxy.getSchemeName().startsWith("http") && validateProxy(proxy)) {
+                    LOGGER.info("================> {}", proxy);
+                    proxyDao.save(new Proxy(proxy.getHostName(), proxy.getPort(), proxy.getSchemeName()));
+                }
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage());
+            } finally {
+                latch.countDown();
+            }
+        }
+    }
+
+    public boolean validateProxy(HttpHost proxy) {
         String schemeName = proxy.getSchemeName();
         String validateUrl = "http://www.baidu.com/";
         if (schemeName.equalsIgnoreCase("https")) {
@@ -104,11 +158,43 @@ public class ProxyLoader {
 
     public void validateFromDb() {
         List<Proxy> allProxy = proxyDao.getAllProxy();
-        for (Proxy proxy : allProxy) {
-            LOGGER.info("proxy={}", proxy.getProxyStr());
-            if (!validate(proxy.toHttpHost())) {
-//                proxyDao.delete(proxy.getId());
-                LOGGER.error("disable proxy={}", proxy.getProxyStr());
+        if (CollectionUtils.isNotEmpty(allProxy)) {
+            final CountDownLatch latch = new CountDownLatch(allProxy.size());
+            ExecutorService executorService = Executors.newFixedThreadPool(5);
+            for (Proxy proxy : allProxy) {
+                executorService.execute(new ValidateJob(proxy, latch));
+            }
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getMessage());
+            }
+            executorService.shutdownNow();
+        }
+    }
+
+    class ValidateJob implements Runnable {
+
+        private Proxy proxy;
+
+        private CountDownLatch latch;
+
+        public ValidateJob(Proxy proxy, CountDownLatch latch) {
+            this.proxy = proxy;
+            this.latch = latch;
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (!validateProxy(proxy.toHttpHost())) {
+                    proxyDao.delete(proxy.getId());
+                    LOGGER.error("disable proxy={}", proxy.getProxyStr());
+                }
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage());
+            } finally {
+                latch.countDown();
             }
         }
     }
