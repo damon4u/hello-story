@@ -41,6 +41,9 @@ public class ProxyLoader {
     
     @Resource
     private ProxyDao proxyDao;
+
+    @Resource
+    private CommentLoader commentLoader;
     
     public void loadProxy() {
         loadFromGit();
@@ -51,7 +54,7 @@ public class ProxyLoader {
         String url = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        String response = HttpUtil.get(url, headers);
+        String response = HttpUtil.get(url, headers, 10);
         if (response == null) {
             return;
         }
@@ -72,7 +75,7 @@ public class ProxyLoader {
         String url = "http://www.xicidaili.com/nn/1.html";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        String response = HttpUtil.get(url, headers);
+        String response = HttpUtil.get(url, headers, 10);
 
         List<Proxy> xiciProxyList = parseXici(response);
         List<HttpHost> proxyList = Lists.newArrayList();
@@ -91,7 +94,7 @@ public class ProxyLoader {
         String url = "http://www.66ip.cn/mo.php?sxb=&tqsl=1000&port=&export=&ktip=&sxa=&submit=%CC%E1++%C8%A1&textarea=";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        String response = HttpUtil.get(url, headers);
+        String response = HttpUtil.get(url, headers, 10);
         Matcher matcher = PATTERN_IP_PORT.matcher(response);
         List<HttpHost> proxyList = Lists.newArrayList();
         while (matcher.find()) {
@@ -155,7 +158,7 @@ public class ProxyLoader {
         public void run() {
             try {
                 // 先只要http类型的
-                if (proxy.getSchemeName().startsWith("http") && validateProxy(proxy)) {
+                if (proxy.getSchemeName().startsWith("http") && commentLoader.getSongInfo(209996, proxy, 5) != null) {
                     LOGGER.info("================> {}", proxy);
                     proxyDao.save(new Proxy(proxy.getHostName(), proxy.getPort(), proxy.getSchemeName()));
                 }
@@ -175,7 +178,7 @@ public class ProxyLoader {
         }
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
-        String response = HttpUtil.getWithProxy(validateUrl, proxy, headers);
+        String response = HttpUtil.getWithProxy(validateUrl, proxy, headers, 5);
 //        LOGGER.info("response={}", response);
         return response != null;
     }
@@ -211,7 +214,7 @@ public class ProxyLoader {
         @Override
         public void run() {
             try {
-                if (!validateProxy(proxy.toHttpHost())) {
+                if (commentLoader.getSongInfo(209996, proxy.toHttpHost(), 5) == null) {
                     proxyDao.delete(proxy.getId());
                     LOGGER.error("disable proxy={}", proxy.getProxyStr());
                 }

@@ -20,18 +20,15 @@ import java.util.concurrent.*;
 public class HttpUtil {
     private static Logger log = LoggerFactory.getLogger(HttpUtil.class);
 
-    private static final int CONNECTION_TIMEOUT_SECONDS = 3;
-    private static final int READ_TIMEOUT_SECONDS = 3;
-
-    public static String get(String url, List<Header> header) {
-        return getWithProxy(url, null, header);
+    public static String get(String url, List<Header> header, int timeoutInSecond) {
+        return getWithProxy(url, null, header, timeoutInSecond);
     }
     
-    public static String getWithProxy(String url, HttpHost proxy, List<Header> header) {
+    public static String getWithProxy(String url, HttpHost proxy, List<Header> header, int timeoutInSecond) {
         try {
             OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                    .connectTimeout(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    .connectTimeout(timeoutInSecond, TimeUnit.SECONDS)
+                    .readTimeout(timeoutInSecond, TimeUnit.SECONDS);
             addProxy(proxy, builder);
             OkHttpClient okHttpClient = builder.build();
             Request.Builder requestBuilder = new Request.Builder();
@@ -58,15 +55,15 @@ public class HttpUtil {
         return null;
     }
 
-    public static String post(String url, List<Header> header, List<NameValuePair> params) {
-        return postWithProxy(url, null, header, params);
+    public static String post(String url, List<Header> header, List<NameValuePair> params, int timeoutInSecond) {
+        return postWithProxy(url, null, header, params, timeoutInSecond);
     }
 
-    public static String postWithProxy(String url, HttpHost proxy, List<Header> header, List<NameValuePair> params) {
+    public static String postWithProxy(String url, HttpHost proxy, List<Header> header, List<NameValuePair> params, int timeoutInSecond) {
         try {
             OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                    .connectTimeout(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    .connectTimeout(timeoutInSecond, TimeUnit.SECONDS)
+                    .readTimeout(timeoutInSecond, TimeUnit.SECONDS);
             addProxy(proxy, builder);
             OkHttpClient okHttpClient = builder.build();
 

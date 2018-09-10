@@ -76,11 +76,11 @@ public class CommentLoader {
     public void loadSongs(int start, int end) throws InterruptedException {
         for(int songId = start; songId <= end; songId++) {
             Proxy proxy = getRandomProxy();
-            Song songInfo = getSongInfo(songId, proxy.toHttpHost());
+            Song songInfo = getSongInfo(songId, proxy.toHttpHost(), 10);
             if (songInfo == null) { // 重试一次
                 proxyDao.delete(proxy.getId());
                 proxy = getRandomProxy();
-                songInfo = getSongInfo(songId, proxy.toHttpHost());
+                songInfo = getSongInfo(songId, proxy.toHttpHost(), 10);
             }
             if (songInfo == null) {
                 proxyDao.delete(proxy.getId());
@@ -108,7 +108,7 @@ public class CommentLoader {
         List<NameValuePair> params = Lists.newArrayList();
         params.add(new BasicNameValuePair("params", "flQdEgSsTmFkRagRN2ceHMwk6lYVIMro5auxLK/JywlqdjeNvEtiWDhReFI+QymePGPLvPnIuVi3dfsDuqEJW204VdwvX+gr3uiRBeSFuOm1VUSJ1HqOc+nJCh0j6WGUbWuJC5GaHTEE4gcpWXX36P4Eu4djoQBzoqdsMbCwoolb2/WrYw/N2hehuwBHO4Oz"));
         params.add(new BasicNameValuePair("encSecKey", "0263b1cd3b0a9b621a819b73e588e1cc5709349b21164dc45ab760e79858bb712986ea064dbfc41669e527b767f02da7511ac862cbc54ea7d164fc65e0359962273616e68e694453fb6820fa36dd9915b2b0f60dadb0a6022b2187b9ee011b35d82a1c0ed8ba0dceb877299eca944e80b1e74139f0191adf71ca536af7d7ec25"));
-        String response = HttpUtil.postWithProxy(url, proxy, headers, params);
+        String response = HttpUtil.postWithProxy(url, proxy, headers, params, 10);
         long commentCount = 0;
         if (StringUtils.isNotBlank(response)) {
             JSONObject res = JSONObject.parseObject(response);
@@ -165,13 +165,13 @@ public class CommentLoader {
      * @param songId 歌曲id
      * @return 如果找到，返回：歌曲名称 - 歌手名称；否则返回null
      */
-    public Song getSongInfo(long songId, HttpHost proxy) {
+    public Song getSongInfo(long songId, HttpHost proxy, int timeoutInSecond) {
         String url = "http://music.163.com/song?id=" + songId;
         List<Header> headerList = Lists.newArrayList();
         headerList.add(new BasicHeader("User-Agent", UAUtil.getUA()));
         headerList.add(new BasicHeader("Referer", "http://music.163.com/"));
         headerList.add(new BasicHeader("Connection", "keep-alive/"));
-        String response = HttpUtil.getWithProxy(url, proxy, headerList);
+        String response = HttpUtil.getWithProxy(url, proxy, headerList, timeoutInSecond);
         if (StringUtils.isBlank(response)) {
             return null;
         }
