@@ -1,7 +1,6 @@
 package com.damon4u.story.loader;
 
 import com.damon4u.story.dao.ProxyDao;
-import com.damon4u.story.entity.GitProxy;
 import com.damon4u.story.entity.Proxy;
 import com.damon4u.story.util.HttpUtil;
 import com.damon4u.story.util.JSONUtil;
@@ -52,10 +51,10 @@ public class ProxyLoader {
         if (response == null) {
             return;
         }
-        List<GitProxy> gitProxyList = JSONUtil.fromJsonList(response, GitProxy.class);
+        List<Proxy> gitProxyList = JSONUtil.fromJsonList(response, Proxy.class);
         List<HttpHost> proxyList = Lists.newArrayList();
         if (CollectionUtils.isNotEmpty(gitProxyList)) {
-            for (GitProxy gitProxy : gitProxyList) {
+            for (Proxy gitProxy : gitProxyList) {
                 LOGGER.info("gitProxy={}", gitProxy.getProxyStr());
                 proxyList.add(gitProxy.toHttpHost());
             }
