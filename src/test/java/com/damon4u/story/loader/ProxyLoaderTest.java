@@ -25,7 +25,8 @@ public class ProxyLoaderTest {
     
     @Test
     public void loadFromGit() {
-        proxyLoader.loadFromGit();
+//        proxyLoader.loadFromGit();
+        proxyLoader.loadFrom66ip();
     }
     
     @Test

@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Description:
@@ -34,6 +36,8 @@ import java.util.concurrent.Executors;
 @Component
 public class ProxyLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProxyLoader.class);
+
+    private static final Pattern PATTERN_IP_PORT = Pattern.compile("((?:(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))):\\d{0,5}");
     
     @Resource
     private ProxyDao proxyDao;
@@ -70,7 +74,7 @@ public class ProxyLoader {
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
         String response = HttpUtil.get(url, headers);
 
-        List<Proxy> xiciProxyList = parse(response);
+        List<Proxy> xiciProxyList = parseXici(response);
         List<HttpHost> proxyList = Lists.newArrayList();
         if (CollectionUtils.isNotEmpty(xiciProxyList)) {
             for (Proxy xiciProxy : xiciProxyList) {
@@ -81,8 +85,29 @@ public class ProxyLoader {
         filterProxy(proxyList);
         LOGGER.info("loadFromXici done.");
     }
+
+    public void loadFrom66ip() {
+        LOGGER.info("loadFrom66ip start...");
+        String url = "http://www.66ip.cn/mo.php?sxb=&tqsl=1000&port=&export=&ktip=&sxa=&submit=%CC%E1++%C8%A1&textarea=";
+        List<Header> headers = Lists.newArrayList();
+        headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
+        String response = HttpUtil.get(url, headers);
+        Matcher matcher = PATTERN_IP_PORT.matcher(response);
+        List<HttpHost> proxyList = Lists.newArrayList();
+        while (matcher.find()) {
+            String group = matcher.group();
+            String[] split = group.split(":");
+            String host = split[0];
+            String ip = split[1];
+            proxyList.add(new HttpHost(host, Integer.valueOf(ip)));
+            LOGGER.info(group);
+        }
+
+        filterProxy(proxyList);
+        LOGGER.info("loadFrom66ip done.");
+    }
     
-    private List<Proxy> parse(String html) {
+    private List<Proxy> parseXici(String html) {
         Document document = Jsoup.parse(html);
         Elements elements = document.select("table[id=ip_list] tr[class]");
         List<Proxy> proxyList = new ArrayList<>(elements.size());
