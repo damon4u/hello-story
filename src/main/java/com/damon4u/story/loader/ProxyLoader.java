@@ -50,7 +50,7 @@ public class ProxyLoader {
     }
     
     public void loadFromGit() {
-        LOGGER.info("loadFromGit start...");
+        LOGGER.info("loadFromGit start.");
         String url = "https://raw.githubusercontent.com/stamparm/aux/master/fetch-some-list.txt";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
@@ -71,7 +71,7 @@ public class ProxyLoader {
     }
 
     public void loadFromXici() {
-        LOGGER.info("loadFromXici start...");
+        LOGGER.info("loadFromXici start.");
         String url = "http://www.xicidaili.com/nn/1.html";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
@@ -90,7 +90,7 @@ public class ProxyLoader {
     }
 
     public void loadFrom66ip() {
-        LOGGER.info("loadFrom66ip start...");
+        LOGGER.info("loadFrom66ip start.");
         String url = "http://www.66ip.cn/mo.php?sxb=&tqsl=1000&port=&export=&ktip=&sxa=&submit=%CC%E1++%C8%A1&textarea=";
         List<Header> headers = Lists.newArrayList();
         headers.add(new BasicHeader("User-Agent", UAUtil.getUA()));
