@@ -29,7 +29,7 @@ public class CommentResponseLoaderTest {
 
     @Test
     public void loadSongs() throws Exception {
-        commentLoader.loadSongs(209997,209997);
+        commentLoader.loadSongs(210032,220000);
     }
 
     @Test

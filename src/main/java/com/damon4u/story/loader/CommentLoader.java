@@ -52,6 +52,7 @@ public class CommentLoader {
     private static Pattern DESCRIPTION_PATTERN = Pattern.compile("<meta name=\"description\" content=\"(.*)\" />");
     private static Pattern IMAGE_PATTERN = Pattern.compile("<meta property=\"og:image\" content=\"(.*)\" />");
 
+    public static final int LOAD_TIMEOUT_SECOND = 15;
     @Resource
     private SongDao songDao;
     
@@ -76,11 +77,11 @@ public class CommentLoader {
     public void loadSongs(int start, int end) throws InterruptedException {
         for(int songId = start; songId <= end; songId++) {
             Proxy proxy = getRandomProxy();
-            Song songInfo = getSongInfo(songId, proxy.toHttpHost(), 10);
+            Song songInfo = getSongInfo(songId, proxy.toHttpHost(), LOAD_TIMEOUT_SECOND);
             if (songInfo == null) { // 重试一次
                 proxyDao.delete(proxy.getId());
                 proxy = getRandomProxy();
-                songInfo = getSongInfo(songId, proxy.toHttpHost(), 10);
+                songInfo = getSongInfo(songId, proxy.toHttpHost(), LOAD_TIMEOUT_SECOND);
             }
             if (songInfo == null) {
                 proxyDao.delete(proxy.getId());
@@ -89,7 +90,7 @@ public class CommentLoader {
             if (songInfo != null) {
                 loadCommentInfo(songInfo, proxy.toHttpHost());
             }
-            TimeUnit.SECONDS.sleep(2);
+            TimeUnit.MILLISECONDS.sleep(100);
         }
     }
 
@@ -108,7 +109,7 @@ public class CommentLoader {
         List<NameValuePair> params = Lists.newArrayList();
         params.add(new BasicNameValuePair("params", "flQdEgSsTmFkRagRN2ceHMwk6lYVIMro5auxLK/JywlqdjeNvEtiWDhReFI+QymePGPLvPnIuVi3dfsDuqEJW204VdwvX+gr3uiRBeSFuOm1VUSJ1HqOc+nJCh0j6WGUbWuJC5GaHTEE4gcpWXX36P4Eu4djoQBzoqdsMbCwoolb2/WrYw/N2hehuwBHO4Oz"));
         params.add(new BasicNameValuePair("encSecKey", "0263b1cd3b0a9b621a819b73e588e1cc5709349b21164dc45ab760e79858bb712986ea064dbfc41669e527b767f02da7511ac862cbc54ea7d164fc65e0359962273616e68e694453fb6820fa36dd9915b2b0f60dadb0a6022b2187b9ee011b35d82a1c0ed8ba0dceb877299eca944e80b1e74139f0191adf71ca536af7d7ec25"));
-        String response = HttpUtil.postWithProxy(url, proxy, headers, params, 10);
+        String response = HttpUtil.postWithProxy(url, proxy, headers, params, LOAD_TIMEOUT_SECOND);
         long commentCount = 0;
         if (StringUtils.isNotBlank(response)) {
             JSONObject res = JSONObject.parseObject(response);

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 public interface UserDao {
 
     @Insert("INSERT IGNORE INTO user (user_id, nickname, avatar_url, create_time) " +
-            "VALUES (#{userId}, #{nickname}, #{avatarUrl}, now()})")
+            "VALUES (#{userId}, #{nickname}, #{avatarUrl}, now())")
     int save(User user);
 
 }
